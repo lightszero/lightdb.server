@@ -51,8 +51,46 @@ namespace lightdb.server
                     await OnPing(msg, iddata);
                     break;
                 case "_db.state":
-                    await OnState(msg, iddata);
+                    await OnDB_State(msg, iddata);
                     break;
+
+                ///snapshot interface
+                case "_db.usesnapshot":
+                    await OnDB_UseSnapShot(msg, iddata);
+                    break;
+                case "_db.unusesnapshot":
+                    await OnDB_UnuseSnapShot(msg, iddata);
+                    break;
+                case "_db.snapshot.dataheight":
+                    await OnSnapshotDataHeight(msg, iddata);//ulong DataHeight { get; }
+                    break;
+                case "_db.snapshot.getvalue":
+                    await OnSnapshot_GetValue(msg, iddata);//DBValue GetValue(byte[] tableid, byte[] key);
+                    break;
+                case "_db.snapshot.gettableinfo":
+                    await OnSnapshot_GetTableInfo(msg, iddata);//TableInfo GetTableInfo(byte[] tableid);
+                    break;
+                case "_db.snapshot.gettablecount":
+                    await OnSnapshot_GetTableCount(msg, iddata); //uint GetTableCount(byte[] tableid);
+                    break;
+                case "_db.snapshot.newiterator":
+                    await OnSnapshot_CreateKeyIterator(msg, iddata); //CreateKeyIterator(byte[] tableid, byte[] _beginkey = null, byte[] _endkey = null);
+                    break;
+                case "_db.iterator.current":
+                    await OnSnapshot_IteratorCurrent(msg, iddata); //CreateKeyIterator(byte[] tableid, byte[] _beginkey = null, byte[] _endkey = null);
+                    break;
+                case "_db.iterator.next":
+                    await OnSnapshot_IteratorNext(msg, iddata); //CreateKeyIterator(byte[] tableid, byte[] _beginkey = null, byte[] _endkey = null);
+                    break;
+                case "_db.iterator.reset":
+                    await OnSnapshot_IteratorReset(msg, iddata); //CreateKeyIterator(byte[] tableid, byte[] _beginkey = null, byte[] _endkey = null);
+                    break;
+
+                ///write method
+                case "_db.wrtie":
+                    await OnDB_Write(msg, iddata);
+                    break;
+
                 default:
                     throw new Exception("unknown msg cmd:" + msg.Cmd);
             }
@@ -65,7 +103,7 @@ namespace lightdb.server
             await SendToClient(msg);
 
         }
-        public async Task OnState(NetMessage msgRecv, byte[] id)
+        public async Task OnDB_State(NetMessage msgRecv, byte[] id)
         {
             var msg = NetMessage.Create("_db.state.back");
             msg.Params["_id"] = id;
@@ -97,6 +135,88 @@ namespace lightdb.server
             }
             await SendToClient(msg);
 
+        }
+        public async Task OnDB_UseSnapShot(NetMessage msgRecv, byte[] id)
+        {
+            var msg = NetMessage.Create("_db.usesnapshot.back");
+            msg.Params["_id"] = id;
+            msg.Params["_error"] = "not implement yet".ToBytes_UTF8Encode();
+            await SendToClient(msg);
+        }
+        public async Task OnDB_UnuseSnapShot(NetMessage msgRecv, byte[] id)
+        {
+            var msg = NetMessage.Create("_db.unusesnapshot.back");
+            msg.Params["_id"] = id;
+            msg.Params["_error"] = "not implement yet".ToBytes_UTF8Encode();
+            await SendToClient(msg);
+        }
+        public async Task OnSnapshotDataHeight(NetMessage msgRecv, byte[] id)
+        {
+            var msg = NetMessage.Create("_db.snapshot.dataheight.back");
+            msg.Params["_id"] = id;
+            msg.Params["_error"] = "not implement yet".ToBytes_UTF8Encode();
+            await SendToClient(msg);
+        }
+        public async Task OnSnapshot_GetValue(NetMessage msgRecv, byte[] id)
+        {
+            var msg = NetMessage.Create("_db.snapshot.getvalue.back");
+            msg.Params["_id"] = id;
+            msg.Params["_error"] = "not implement yet".ToBytes_UTF8Encode();
+            await SendToClient(msg);
+        }
+        public async Task OnSnapshot_GetTableCount(NetMessage msgRecv, byte[] id)
+        {
+            var msg = NetMessage.Create("_db.snapshot.gettablecount.back");
+            msg.Params["_id"] = id;
+            msg.Params["_error"] = "not implement yet".ToBytes_UTF8Encode();
+            await SendToClient(msg);
+        }
+        public async Task OnSnapshot_GetTableInfo(NetMessage msgRecv, byte[] id)
+        {
+            var msg = NetMessage.Create("_db.snapshot.gettableinfo.back");
+            msg.Params["_id"] = id;
+            msg.Params["_error"] = "not implement yet".ToBytes_UTF8Encode();
+            await SendToClient(msg);
+        }
+        public async Task OnSnapshot_CreateKeyIterator(NetMessage msgRecv, byte[] id)
+        {
+            var msg = NetMessage.Create("__db.snapshot.newiterator.back");
+            msg.Params["_id"] = id;
+            msg.Params["_error"] = "not implement yet".ToBytes_UTF8Encode();
+            if (Program.storage.state_DBOpen)
+            {
+                var snapshot = Program.storage.maindb.UseSnapShot();
+                snapshot.CreateKeyIterator(msg.Params["tableid"], null, null);
+            }
+            await SendToClient(msg);
+        }
+        public async Task OnSnapshot_IteratorCurrent(NetMessage msgRecv, byte[] id)
+        {
+            var msg = NetMessage.Create("_db.iterator.current.back");
+            msg.Params["_id"] = id;
+            msg.Params["_error"] = "not implement yet".ToBytes_UTF8Encode();
+            await SendToClient(msg);
+        }
+        public async Task OnSnapshot_IteratorNext(NetMessage msgRecv, byte[] id)
+        {
+            var msg = NetMessage.Create("_db.iterator.next.back");
+            msg.Params["_id"] = id;
+            msg.Params["_error"] = "not implement yet".ToBytes_UTF8Encode();
+            await SendToClient(msg);
+        }
+        public async Task OnSnapshot_IteratorReset(NetMessage msgRecv, byte[] id)
+        {
+            var msg = NetMessage.Create("_db.iterator.reset.back");
+            msg.Params["_id"] = id;
+            msg.Params["_error"] = "not implement yet".ToBytes_UTF8Encode();
+            await SendToClient(msg);
+        }
+        public async Task OnDB_Write(NetMessage msgRecv, byte[] id)
+        {
+            var msg = NetMessage.Create("_db.write.back");
+            msg.Params["_id"] = id;
+            msg.Params["_error"] = "not implement yet".ToBytes_UTF8Encode();
+            await SendToClient(msg);
         }
     }
 }
