@@ -385,16 +385,65 @@ namespace lightdb.server
             //这个完全可以不要等待呀
             SendToClient(msg);
         }
+        public static void QuickFixHeight(byte[] data, byte[] heightbuf)
+        {
+            //var v = data[0];
+            var tagLength = data[1];
+            //var timestamp = BitConverter.ToUInt64(data, 2 + taglength);
+            for (var i = 0; i < 8; i++)
+            {
+                data[tagLength + 2 + i] = heightbuf[i];
+            }
+            //var timestamp2 = BitConverter.ToUInt64(data, 2 + taglength);
+        }
+        public static byte[] QuickGetHeight(byte[] data)
+        {
+            byte[] heightbuf = new byte[8];
+            var tagLength = data[1];
+            for (var i = 0; i < 8; i++)
+            {
+                heightbuf[i] = data[tagLength + 2 + i];
+            }
+            return heightbuf;
+        }
         public async Task OnDB_Write(NetMessage msgRecv, byte[] id)
         {
             var msg = NetMessage.Create("_db.write.back");
             msg.Params["_id"] = id;
-            msg.Params["_error"] = "not implement yet".ToBytes_UTF8Encode();
             try
             {
-                var data = msg.Params["writetask"];
-                var writetask = WriteTask.FromRaw(data);
-                Program.storage.maindb.Write(writetask);
+                var data = msgRecv.Params["writetask"];
+                var lastblockhashRecv = msgRecv.Params["lasthash"];
+
+                using (var snap = Program.storage.maindb.UseSnapShot())
+                {
+                    var blockidlast = BitConverter.GetBytes((UInt64)(snap.DataHeight - 1));
+
+                    var writetask = WriteTask.FromRaw(data);
+                    //不够用，还需要block高度
+                    var lasthashFind = snap.GetValue(StorageService.tableID_BlockID2Hash, blockidlast).value;
+                    if (Helper.BytesEquals(lastblockhashRecv, lasthashFind))
+                    {
+
+                        //写入数据
+                        byte[] taskdata = Program.storage.maindb.Write(writetask);
+                        byte[] taskhash = Helper.Sha256.ComputeHash(taskdata);
+                        var taskheight = QuickGetHeight(taskdata);
+                        //写入hash
+                        var writehash = Program.storage.maindb.CreateWriteTask();
+                        writehash.Put(StorageService.tableID_BlockID2Hash, taskheight, DBValue.FromValue(DBValue.Type.Bytes, taskhash));
+                        Program.storage.maindb.Write(writehash);
+
+                        //进表
+                        msg.Params["blockheight"] = taskheight;
+                        msg.Params["blockhash"] = taskhash;
+                    }
+                    else
+                    {
+                        msg.Params["_error"] = "block hash is error".ToBytes_UTF8Encode();
+                    }
+
+                }
             }
             catch (Exception err)
             {
