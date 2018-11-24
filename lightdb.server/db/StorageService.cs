@@ -52,6 +52,14 @@ namespace lightdb.server
                     createop.FirstTask.CreateTable(new LightDB.TableInfo(tableID_Writer, "_writeraddress_", "", LightDB.DBValue.Type.String));
                     createop.FirstTask.CreateTable(new LightDB.TableInfo(tableID_BlockID2Hash, "_block:index->hash_", "", LightDB.DBValue.Type.String));
                     createop.FirstTask.Put(tableID_Writer, Program.config.storage_maindb_firstwriter_address.ToBytes_UTF8Encode(), LightDB.DBValue.FromValue(LightDB.DBValue.Type.BOOL, true));
+                    
+                    //用后处理写入hash
+                    createop.afterparser = (_task, _data, _wb) =>
+                      {
+                          var hash = Helper.Sha256.ComputeHash(_data);
+
+                          _wb.Put(StorageService.tableID_BlockID2Hash, new byte[8], DBValue.FromValue(DBValue.Type.Bytes, hash));
+                      };
 
                     maindb.Open(pathDB, createop);
                     Console.WriteLine("db created in:" + pathDB);

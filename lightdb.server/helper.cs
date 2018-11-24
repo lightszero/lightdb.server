@@ -17,6 +17,7 @@ namespace lightdb.server
                 return _sha256;
             }
         }
+
         public static bool BytesEquals(byte[] a1, byte[] a2)
         {
             if (ReferenceEquals(a1, a2))

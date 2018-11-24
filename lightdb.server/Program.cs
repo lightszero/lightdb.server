@@ -141,7 +141,11 @@ namespace lightdb.server
             uint blockid = uint.Parse(words[1]);
             using (var snap = storage.maindb.UseSnapShot())
             {
-                var value = snap.GetValue(LightDB.LightDB.systemtable_block, BitConverter.GetBytes((UInt64)blockid));
+                var blockiddata = BitConverter.GetBytes((UInt64)blockid);
+                var blockhash = snap.GetValue(StorageService.tableID_BlockID2Hash, blockiddata).value.ToString_Hex();
+                Console.WriteLine("block:" + blockid + " hash=" + blockhash);
+
+                var value = snap.GetValue(LightDB.LightDB.systemtable_block, blockiddata);
                 if (value != null && value.type != DBValue.Type.Deleted)
                 {
                     var task = LightDB.WriteTask.FromRaw(value.value);

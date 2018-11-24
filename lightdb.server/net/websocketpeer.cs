@@ -424,15 +424,18 @@ namespace lightdb.server
                     var lasthashFind = snap.GetValue(StorageService.tableID_BlockID2Hash, blockidlast).value;
                     if (Helper.BytesEquals(lastblockhashRecv, lasthashFind))
                     {
+                        byte[] taskhash = null;
+                        byte[] taskheight = null;
 
+                        //数据追加处理
+                        Action<WriteTask, byte[], LightDB.IWriteBatch> afterparser = (_task, _data, _wb) =>
+                            {
+                                taskhash = Helper.Sha256.ComputeHash(_data);
+                                taskheight = QuickGetHeight(_data);
+                                _wb.Put(StorageService.tableID_BlockID2Hash, taskheight, DBValue.FromValue(DBValue.Type.Bytes, taskhash));
+                            };
                         //写入数据
-                        byte[] taskdata = Program.storage.maindb.Write(writetask);
-                        byte[] taskhash = Helper.Sha256.ComputeHash(taskdata);
-                        var taskheight = QuickGetHeight(taskdata);
-                        //写入hash
-                        var writehash = Program.storage.maindb.CreateWriteTask();
-                        writehash.Put(StorageService.tableID_BlockID2Hash, taskheight, DBValue.FromValue(DBValue.Type.Bytes, taskhash));
-                        Program.storage.maindb.Write(writehash);
+                        Program.storage.maindb.Write(writetask, afterparser);
 
                         //进表
                         msg.Params["blockheight"] = taskheight;
