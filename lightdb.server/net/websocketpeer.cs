@@ -118,7 +118,18 @@ namespace lightdb.server
                 case "_db.wrtie":
                     await OnDB_Write(msg, iddata);
                     break;
-
+                //要扩展几个东西,直接获取block信息和blockhash,获取有写入权限的地址
+                case "_db.snapshot.getblock":
+                    await OnSnapshotEXT_GetBlock(msg, iddata);
+                    break;
+                case "_db.snapshot.getblockhash":
+                    await OnSnapshotEXT_GetBlockHash(msg, iddata);
+                    break;
+                case "_db.snapshot.getwriter":
+                    await OnSnapshotEXT_GetWriter(msg, iddata);
+                    break;
+                //还需要扩展，查询的时候，一次返回多个的
+                //case "_db.iteratorex.nextmulti":
                 default:
                     throw new Exception("unknown msg cmd:" + msg.Cmd);
             }
@@ -184,7 +195,7 @@ namespace lightdb.server
             msg.Params["_id"] = id;
             try
             {
-                UInt64? wantheight = msg.Params.ContainsKey("snapheight") ? (UInt64?)BitConverter.ToUInt64(msg.Params["snapheight"], 0) : null;
+                UInt64? wantheight = msgRecv.Params.ContainsKey("snapheight") ? (UInt64?)BitConverter.ToUInt64(msgRecv.Params["snapheight"], 0) : null;
                 if (wantheight == null)
                 {
                     var snapshot = Program.storage.maindb.UseSnapShot();
@@ -215,7 +226,7 @@ namespace lightdb.server
             msg.Params["_id"] = id;
             try
             {
-                UInt64 snapheight = BitConverter.ToUInt64(msg.Params["snapheight"]);
+                UInt64 snapheight = BitConverter.ToUInt64(msgRecv.Params["snapheight"]);
                 bool b = peerSnapshots.TryRemove(snapheight, out ISnapShot value);
                 if (b)
                 {
@@ -235,7 +246,7 @@ namespace lightdb.server
             msg.Params["_id"] = id;
             try
             {
-                UInt64 snapheight = BitConverter.ToUInt64(msg.Params["snapheight"]);
+                UInt64 snapheight = BitConverter.ToUInt64(msgRecv.Params["snapheight"]);
                 var snap = peerSnapshots[snapheight];
                 msg.Params["dataheight"] = BitConverter.GetBytes(snap.DataHeight);
 
@@ -252,10 +263,73 @@ namespace lightdb.server
             msg.Params["_id"] = id;
             try
             {
-                UInt64 snapheight = BitConverter.ToUInt64(msg.Params["snapheight"]);
+                UInt64 snapheight = BitConverter.ToUInt64(msgRecv.Params["snapheight"]);
                 var snap = peerSnapshots[snapheight];
-                byte[] data = snap.GetValueData(msg.Params["tableid"], msg.Params["key"]);
+                byte[] data = snap.GetValueData(msgRecv.Params["tableid"], msgRecv.Params["key"]);
                 msg.Params["data"] = data;
+            }
+            catch (Exception err)
+            {
+                msg.Params["_error"] = err.Message.ToBytes_UTF8Encode();
+            }
+            //这个完全可以不要等待呀
+            SendToClient(msg);
+        }
+        public async Task OnSnapshotEXT_GetBlock(NetMessage msgRecv, byte[] id)
+        {
+            var msg = NetMessage.Create("_db.snapshot.getblock.back");
+            msg.Params["_id"] = id;
+            try
+            {
+                UInt64 snapheight = BitConverter.ToUInt64(msgRecv.Params["snapheight"]);
+                var snap = peerSnapshots[snapheight];
+                byte[] data = snap.GetValueData(LightDB.LightDB.systemtable_block, msgRecv.Params["blockid"]);
+                msg.Params["data"] = data;
+            }
+            catch (Exception err)
+            {
+                msg.Params["_error"] = err.Message.ToBytes_UTF8Encode();
+            }
+            //这个完全可以不要等待呀
+            SendToClient(msg);
+        }
+        public async Task OnSnapshotEXT_GetBlockHash(NetMessage msgRecv, byte[] id)
+        {
+            var msg = NetMessage.Create("_db.snapshot.getblockhash.back");
+            msg.Params["_id"] = id;
+            try
+            {
+                UInt64 snapheight = BitConverter.ToUInt64(msgRecv.Params["snapheight"]);
+                var snap = peerSnapshots[snapheight];
+                byte[] data = snap.GetValueData(StorageService.tableID_BlockID2Hash, msgRecv.Params["blockid"]);
+                msg.Params["data"] = data;
+            }
+            catch (Exception err)
+            {
+                msg.Params["_error"] = err.Message.ToBytes_UTF8Encode();
+            }
+            //这个完全可以不要等待呀
+            SendToClient(msg);
+        }
+        public async Task OnSnapshotEXT_GetWriter(NetMessage msgRecv, byte[] id)
+        {
+            var msg = NetMessage.Create("_db.snapshot.getwriter.back");
+            msg.Params["_id"] = id;
+            try
+            {
+                UInt64 snapheight = BitConverter.ToUInt64(msgRecv.Params["snapheight"]);
+                var snap = peerSnapshots[snapheight];
+                var allwriter = snap.CreateKeyFinder(StorageService.tableID_Writer);
+                int n = 0;
+                foreach (var wkey in allwriter)
+                {
+                    var v = snap.GetValue(StorageService.tableID_Writer, wkey);
+                    if(v.AsBool()==true)
+                    {
+                        msg.Params["writer" + n] = wkey;
+                        n++;
+                    }
+                }
             }
             catch (Exception err)
             {
@@ -270,9 +344,9 @@ namespace lightdb.server
             msg.Params["_id"] = id;
             try
             {
-                UInt64 snapheight = BitConverter.ToUInt64(msg.Params["snapheight"]);
+                UInt64 snapheight = BitConverter.ToUInt64(msgRecv.Params["snapheight"]);
                 var snap = peerSnapshots[snapheight];
-                byte[] data = BitConverter.GetBytes(snap.GetTableCount(msg.Params["tableid"]));
+                byte[] data = BitConverter.GetBytes(snap.GetTableCount(msgRecv.Params["tableid"]));
                 msg.Params["count"] = data;
             }
             catch (Exception err)
@@ -288,11 +362,11 @@ namespace lightdb.server
             msg.Params["_id"] = id;
             try
             {
-                UInt64 snapheight = BitConverter.ToUInt64(msg.Params["snapheight"]);
+                UInt64 snapheight = BitConverter.ToUInt64(msgRecv.Params["snapheight"]);
                 var snap = peerSnapshots[snapheight];
 
                 //此处可以优化，增加一个GetTableInfoData,不要转一次
-                byte[] data = snap.GetTableInfo(msg.Params["tableid"]).ToBytes();
+                byte[] data = snap.GetTableInfo(msgRecv.Params["tableid"]).ToBytes();
                 msg.Params["info"] = data;
             }
             catch (Exception err)
@@ -308,13 +382,13 @@ namespace lightdb.server
             msg.Params["_id"] = id;
             try
             {
-                UInt64 snapheight = BitConverter.ToUInt64(msg.Params["snapheight"]);
+                UInt64 snapheight = BitConverter.ToUInt64(msgRecv.Params["snapheight"]);
                 var snap = peerSnapshots[snapheight];
 
                 //这里缺一个给唯一ID的方式,采用顺序编号是个临时方法
-                var beginkey = msg.Params?["beginkey"];
-                var endkey = msg.Params?["endkey"];
-                var iter = snap.CreateKeyIterator(msg.Params["tableid"], beginkey, endkey);
+                var beginkey = msgRecv.Params?["beginkey"];
+                var endkey = msgRecv.Params?["endkey"];
+                var iter = snap.CreateKeyIterator(msgRecv.Params["tableid"], beginkey, endkey);
                 ulong index = (UInt64)this.peerItertors.Count;
                 this.peerItertors[index] = iter;
 
@@ -334,7 +408,7 @@ namespace lightdb.server
             msg.Params["_id"] = id;
             try
             {
-                UInt64 iteratorid = BitConverter.ToUInt64(msg.Params["iteratorid"]);
+                UInt64 iteratorid = BitConverter.ToUInt64(msgRecv.Params["iteratorid"]);
                 var it = peerItertors[iteratorid];
 
                 var data = it.Current;
@@ -354,11 +428,13 @@ namespace lightdb.server
 
             try
             {
-                UInt64 iteratorid = BitConverter.ToUInt64(msg.Params["iteratorid"]);
+                UInt64 iteratorid = BitConverter.ToUInt64(msgRecv.Params["iteratorid"]);
                 var it = peerItertors[iteratorid];
 
                 var b = it.MoveNext();
                 msg.Params["movenext"] = new byte[] { (byte)(b ? 1 : 0) };
+                var data = it.Current;
+                msg.Params["data"] = data;
             }
             catch (Exception err)
             {
@@ -373,7 +449,7 @@ namespace lightdb.server
             msg.Params["_id"] = id;
             try
             {
-                UInt64 iteratorid = BitConverter.ToUInt64(msg.Params["iteratorid"]);
+                UInt64 iteratorid = BitConverter.ToUInt64(msgRecv.Params["iteratorid"]);
                 var it = peerItertors[iteratorid];
 
                 it.Reset();
@@ -385,27 +461,7 @@ namespace lightdb.server
             //这个完全可以不要等待呀
             SendToClient(msg);
         }
-        public static void QuickFixHeight(byte[] data, byte[] heightbuf)
-        {
-            //var v = data[0];
-            var tagLength = data[1];
-            //var timestamp = BitConverter.ToUInt64(data, 2 + taglength);
-            for (var i = 0; i < 8; i++)
-            {
-                data[tagLength + 2 + i] = heightbuf[i];
-            }
-            //var timestamp2 = BitConverter.ToUInt64(data, 2 + taglength);
-        }
-        public static byte[] QuickGetHeight(byte[] data)
-        {
-            byte[] heightbuf = new byte[8];
-            var tagLength = data[1];
-            for (var i = 0; i < 8; i++)
-            {
-                heightbuf[i] = data[tagLength + 2 + i];
-            }
-            return heightbuf;
-        }
+
         public async Task OnDB_Write(NetMessage msgRecv, byte[] id)
         {
             var msg = NetMessage.Create("_db.write.back");
@@ -431,7 +487,7 @@ namespace lightdb.server
                         Action<WriteTask, byte[], LightDB.IWriteBatch> afterparser = (_task, _data, _wb) =>
                             {
                                 taskhash = Helper.Sha256.ComputeHash(_data);
-                                taskheight = QuickGetHeight(_data);
+                                taskheight = DBValue.QuickGetHeight(_data);
                                 _wb.Put(StorageService.tableID_BlockID2Hash, taskheight, DBValue.FromValue(DBValue.Type.Bytes, taskhash));
                             };
                         //写入数据
