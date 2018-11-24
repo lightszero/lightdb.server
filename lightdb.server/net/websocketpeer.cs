@@ -7,7 +7,7 @@ using LightDB;
 namespace lightdb.server
 {
 
-    public class websockerPeer : lightchain.httpserver.httpserver.IWebSocketPeer
+    public partial class websockerPeer : lightchain.httpserver.httpserver.IWebSocketPeer
     {
         System.Net.WebSockets.WebSocket websocket;
 
@@ -324,7 +324,7 @@ namespace lightdb.server
                 foreach (var wkey in allwriter)
                 {
                     var v = snap.GetValue(StorageService.tableID_Writer, wkey);
-                    if(v.AsBool()==true)
+                    if (v.AsBool() == true)
                     {
                         msg.Params["writer" + n] = wkey;
                         n++;
@@ -453,56 +453,6 @@ namespace lightdb.server
                 var it = peerItertors[iteratorid];
 
                 it.Reset();
-            }
-            catch (Exception err)
-            {
-                msg.Params["_error"] = err.Message.ToBytes_UTF8Encode();
-            }
-            //这个完全可以不要等待呀
-            SendToClient(msg);
-        }
-
-        public async Task OnDB_Write(NetMessage msgRecv, byte[] id)
-        {
-            var msg = NetMessage.Create("_db.write.back");
-            msg.Params["_id"] = id;
-            try
-            {
-                var data = msgRecv.Params["writetask"];
-                var lastblockhashRecv = msgRecv.Params["lasthash"];
-
-                using (var snap = Program.storage.maindb.UseSnapShot())
-                {
-                    var blockidlast = BitConverter.GetBytes((UInt64)(snap.DataHeight - 1));
-
-                    var writetask = WriteTask.FromRaw(data);
-                    //不够用，还需要block高度
-                    var lasthashFind = snap.GetValue(StorageService.tableID_BlockID2Hash, blockidlast).value;
-                    if (Helper.BytesEquals(lastblockhashRecv, lasthashFind))
-                    {
-                        byte[] taskhash = null;
-                        byte[] taskheight = null;
-
-                        //数据追加处理
-                        Action<WriteTask, byte[], LightDB.IWriteBatch> afterparser = (_task, _data, _wb) =>
-                            {
-                                taskhash = Helper.Sha256.ComputeHash(_data);
-                                taskheight = DBValue.QuickGetHeight(_data);
-                                _wb.Put(StorageService.tableID_BlockID2Hash, taskheight, DBValue.FromValue(DBValue.Type.Bytes, taskhash));
-                            };
-                        //写入数据
-                        Program.storage.maindb.Write(writetask, afterparser);
-
-                        //进表
-                        msg.Params["blockheight"] = taskheight;
-                        msg.Params["blockhash"] = taskhash;
-                    }
-                    else
-                    {
-                        msg.Params["_error"] = "block hash is error".ToBytes_UTF8Encode();
-                    }
-
-                }
             }
             catch (Exception err)
             {
