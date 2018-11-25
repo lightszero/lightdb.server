@@ -5,7 +5,7 @@ using System;
 using System.Reflection;
 using System.Threading.Tasks;
 using LightDB;
-namespace lightdb.server
+namespace LightDB.Server
 {
     class Program
     {
@@ -114,7 +114,7 @@ namespace lightdb.server
                 using (var snap = storage.maindb.UseSnapShot())
                 {
                     Console.WriteLine("dataheight=" + snap.DataHeight);
-                    var value = snap.GetValue(LightDB.LightDB.systemtable_info, "_magic_".ToBytes_UTF8Encode());
+                    var value = snap.GetValue(LightDB.systemtable_info, "_magic_".ToBytes_UTF8Encode());
                     if (value == null)
                         Console.WriteLine("no magic.");
                     else
@@ -145,10 +145,10 @@ namespace lightdb.server
                 var blockhash = snap.GetValue(StorageService.tableID_BlockID2Hash, blockiddata).value.ToString_Hex();
                 Console.WriteLine("block:" + blockid + " hash=" + blockhash);
 
-                var value = snap.GetValue(LightDB.LightDB.systemtable_block, blockiddata);
+                var value = snap.GetValue(LightDB.systemtable_block, blockiddata);
                 if (value != null && value.type != DBValue.Type.Deleted)
                 {
-                    var task = LightDB.WriteTask.FromRaw(value.value);
+                    var task = WriteTask.FromRaw(value.value);
 
                     Console.WriteLine("block:" + blockid + " len=" + value.value.Length);
                     Console.WriteLine("==blockitems==");

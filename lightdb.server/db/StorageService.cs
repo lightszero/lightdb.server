@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using LightDB;
-namespace lightdb.server
+namespace LightDB.Server
 {
 
     public class StorageService
@@ -12,7 +12,7 @@ namespace lightdb.server
         public static readonly byte[] tableID_BlockID2Hash = new byte[] { 0x08 };
         public static readonly byte[] tableID_BlockID2Verifiy = new byte[] { 0x09 };
 
-        public LightDB.LightDB maindb;
+        public LightDB maindb;
         public bool state_DBOpen
         {
             get;
@@ -25,7 +25,7 @@ namespace lightdb.server
             Console.WriteLine(" == Open DB ==");
 
 
-            maindb = new LightDB.LightDB();
+            maindb = new LightDB();
 
             state_DBOpen = false;
             string fullpath = System.IO.Path.GetFullPath(Program.config.server_storage_path);
@@ -47,16 +47,16 @@ namespace lightdb.server
                 Console.WriteLine("open database fail. try to create it.");
                 try
                 {
-                    LightDB.DBCreateOption createop = new LightDB.DBCreateOption();
+                    DBCreateOption createop = new DBCreateOption();
                     createop.MagicStr = Program.config.storage_maindb_magic;
-                    createop.FirstTask = new LightDB.WriteTask();
+                    createop.FirstTask = new WriteTask();
 
-                    createop.FirstTask.CreateTable(new LightDB.TableInfo(tableID_Writer, "_writeraddress_", "", LightDB.DBValue.Type.String));
+                    createop.FirstTask.CreateTable(new TableInfo(tableID_Writer, "_writeraddress_", "", DBValue.Type.String));
 
-                    createop.FirstTask.Put(tableID_Writer, Program.config.storage_maindb_firstwriter_address.ToBytes_UTF8Encode(), LightDB.DBValue.FromValue(LightDB.DBValue.Type.BOOL, true));
+                    createop.FirstTask.Put(tableID_Writer, Program.config.storage_maindb_firstwriter_address.ToBytes_UTF8Encode(), DBValue.FromValue(DBValue.Type.BOOL, true));
 
-                    createop.FirstTask.CreateTable(new LightDB.TableInfo(tableID_BlockID2Hash, "_block:index->hash_", "", LightDB.DBValue.Type.String));
-                    createop.FirstTask.CreateTable(new LightDB.TableInfo(tableID_BlockID2Verifiy, "_block:index->hash_", "", LightDB.DBValue.Type.String));
+                    createop.FirstTask.CreateTable(new TableInfo(tableID_BlockID2Hash, "_block:index->hash_", "", DBValue.Type.String));
+                    createop.FirstTask.CreateTable(new TableInfo(tableID_BlockID2Verifiy, "_block:index->hash_", "", DBValue.Type.String));
 
                     var srcdata = createop.FirstTask.ToBytes();
                     var hash = Helper.Sha256.ComputeHash(srcdata);

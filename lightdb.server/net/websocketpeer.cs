@@ -1,10 +1,10 @@
-﻿using lightdb.sdk;
+﻿using LightDB.SDK;
 using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using LightDB;
-namespace lightdb.server
+namespace LightDB.Server
 {
 
     public partial class websockerPeer : lightchain.httpserver.httpserver.IWebSocketPeer
@@ -115,7 +115,7 @@ namespace lightdb.server
                     break;
 
                 ///write method
-                case "_db.wrtie":
+                case "_db.write":
                     await OnDB_Write(msg, iddata);
                     break;
                 //要扩展几个东西,直接获取block信息和blockhash,获取有写入权限的地址
@@ -154,7 +154,7 @@ namespace lightdb.server
                     {
                         msg.Params["height"] = BitConverter.GetBytes(snap.DataHeight);
                         //Console.WriteLine("dataheight=" + snap.DataHeight);
-                        var value = snap.GetValue(LightDB.LightDB.systemtable_info, "_magic_".ToBytes_UTF8Encode());
+                        var value = snap.GetValue(LightDB.systemtable_info, "_magic_".ToBytes_UTF8Encode());
                         if (value != null)
                             msg.Params["magic"] = value.value;
 
@@ -283,7 +283,7 @@ namespace lightdb.server
             {
                 UInt64 snapheight = BitConverter.ToUInt64(msgRecv.Params["snapheight"]);
                 var snap = peerSnapshots[snapheight];
-                byte[] data = snap.GetValueData(LightDB.LightDB.systemtable_block, msgRecv.Params["blockid"]);
+                byte[] data = snap.GetValueData(LightDB.systemtable_block, msgRecv.Params["blockid"]);
                 msg.Params["data"] = data;
             }
             catch (Exception err)

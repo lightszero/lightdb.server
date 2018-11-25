@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace lightdb.server
+namespace LightDB.Server
 {
     public static class Helper
     {

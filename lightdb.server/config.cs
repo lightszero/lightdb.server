@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace lightdb.server
+namespace LightDB.Server
 {
     public class Config
     {
