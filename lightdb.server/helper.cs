@@ -17,7 +17,12 @@ namespace LightDB.Server
                 return _sha256;
             }
         }
-
+        public static ThinNeo.Hash256 CalcHash256(byte[] data)
+        {
+            var hash1 = Helper.Sha256.ComputeHash(data);
+            var hash2 = Helper.Sha256.ComputeHash(hash1);
+            return hash2;
+        }
         public static bool BytesEquals(byte[] a1, byte[] a2)
         {
             if (ReferenceEquals(a1, a2))
